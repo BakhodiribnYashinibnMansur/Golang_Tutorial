@@ -1,16 +1,16 @@
 package main
 
 import (
+	bigInt "bigint/bigInt"
 	"fmt"
-	bigint "tutorial/bigInt"
 )
 
 func main() {
-	a, err := bigint.NewBigInt("777777777777777777777777")
+	a, err := bigInt.NewBigInt("777777777777777777777777")
 	if err != nil {
 		panic(err)
 	}
-	b, err := bigint.NewBigInt("44444444444444444444")
+	b, err := bigInt.NewBigInt("44444444444444444444")
 	if err != nil {
 		panic(err)
 	}
@@ -19,11 +19,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	c := bigint.Add(a, b)
+	c := bigInt.Add(a, b)
 
-	d := bigint.Sub(a, b)
+	d := bigInt.Sub(a, b)
 
-	e := bigint.Multiply(a, b)
+	e := bigInt.Multiply(a, b)
 
 	fmt.Println(a, b, c, d, e)
 }

@@ -1,4 +1,4 @@
-package bigint
+package bigInt
 
 import (
 	"errors"
