@@ -8,12 +8,12 @@ import (
 // type articleStorage map[int]models.Article
 func NewArticleStorage() articleStorage {
 	return articleStorage{
-		data: make(map[int]models.Article),
+		data: make([]models.Article, 0, 999),
 	}
 }
 
 type articleStorage struct {
-	data map[int]models.Article
+	data []models.Article
 }
 
 //Errors varableName
@@ -23,38 +23,39 @@ var ErrorNotUpdated = errors.New("not update because not found id")
 
 //add new article
 func (storage *articleStorage) Add(entity models.Article) error {
-	if _, ok := storage.data[entity.ID]; ok {
-		return ErrorAlreadyExists
+	for _, item := range storage.data {
+		if item.ID == entity.ID {
+			return ErrorAlreadyExists
+		}
 	}
-	storage.data[entity.ID] = entity
+	storage.data = append(storage.data, entity)
 	return nil
 }
 
 //get article by id return map
 func (storage *articleStorage) GetByID(ID int) (models.Article, error) {
 	var resp models.Article
-	resp, ok := storage.data[ID]
-	if ok {
-		return resp, nil
+	for _, item := range storage.data {
+		if item.ID == ID {
+			resp = item
+			return resp, nil
+		}
 	}
 	return resp, ErrorNotFound
 }
 
 // get all article return array
 func (storage *articleStorage) GetList() []models.Article {
-	var resp []models.Article
-	for _, data := range storage.data {
-		resp = append(resp, data)
-	}
-	return resp
+	return storage.data
 }
 
 //search article via title return array
 func (storage *articleStorage) Search(str string) []models.Article {
 	var resp []models.Article
-	for _, data := range storage.data {
-		if data.Content.Title == str {
-			resp = append(resp, data)
+	for _, item := range storage.data {
+		if item.Title == str {
+			resp = append(resp, item)
+			return resp
 		}
 	}
 	return resp
@@ -62,18 +63,22 @@ func (storage *articleStorage) Search(str string) []models.Article {
 
 //update exist article
 func (storage *articleStorage) Update(entity models.Article) error {
-	if _, ok := storage.data[entity.ID]; ok {
-		storage.data[entity.ID] = entity
-		return nil
+	for index, item := range storage.data {
+		if item.ID == entity.ID {
+			storage.data[index] = entity
+			return nil
+		}
 	}
 	return ErrorNotUpdated
 }
 
 //delete article via id
 func (storage *articleStorage) Delete(ID int) error {
-	if _, ok := storage.data[ID]; ok {
-		delete(storage.data, ID)
-		return nil
+	for index, item := range storage.data {
+		if item.ID == ID {
+			storage.data = append(storage.data[:index], storage.data[index+1:]...)
+			return nil
+		}
 	}
 	return ErrorNotFound
 }

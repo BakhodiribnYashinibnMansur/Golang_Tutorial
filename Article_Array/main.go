@@ -30,10 +30,10 @@ func main() {
 	}
 	var a2 models.Article
 	a2.ID = 2
-	a2.Title = " Lorem Nowa"
-	a2.Body = "Lorem ipsum"
+	a2.Title = "Data"
+	a2.Body = "data ipsum"
 	var a2p models.Person = models.Person{
-		Firstname: "John",
+		Firstname: "Jane",
 		Lastname:  "Doe",
 	}
 	a2.Author = a2p
@@ -42,6 +42,9 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	getByIdArticle, err := articleStorage.GetByID(2)
+	fmt.Println(getByIdArticle)
 	err = articleStorage.Add(a1)
 	if err != nil {
 		fmt.Println(err)
@@ -55,7 +58,9 @@ func main() {
 		Firstname: "MRB",
 		Lastname:  "Hero",
 	}
+	updateA1.CreatedAt = &t
 	updateA1.Author = updateA1Person
+
 	err = articleStorage.Update(updateA1)
 	if err != nil {
 		fmt.Println(err)
@@ -64,7 +69,7 @@ func main() {
 	articleStorage.Delete(2)
 	articleList := articleStorage.GetList()
 	fmt.Println(articleList)
-	searchArticleList := articleStorage.Search("Lorem")
+	searchArticleList := articleStorage.Search("Data")
 	fmt.Println(searchArticleList)
 	fmt.Println(articleStorage)
 }
