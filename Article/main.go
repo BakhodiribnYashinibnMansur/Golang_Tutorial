@@ -42,28 +42,28 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	// err = articleStorage.Add(a1)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
+	err = articleStorage.Add(a1)
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	// var updateA1 models.Article
-	// updateA1.ID = 1
-	// updateA1.Title = "Go"
-	// updateA1.Body = "Golang "
-	// var updateA1Person models.Person = models.Person{
-	// 	Firstname: "MRB",
-	// 	Lastname:  "Hero",
-	// }
-	// updateA1.Author = updateA1Person
-	// err = articleStorage.Update(updateA1)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
+	var updateA1 models.Article
+	updateA1.ID = 1
+	updateA1.Title = "Go"
+	updateA1.Body = "Golang "
+	var updateA1Person models.Person = models.Person{
+		Firstname: "MRB",
+		Lastname:  "Hero",
+	}
+	updateA1.Author = updateA1Person
+	err = articleStorage.Update(updateA1)
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	// articleStorage.Delete(2)
-	// articleList := articleStorage.GetList()
-	// fmt.Println(articleList)
+	articleStorage.Delete(2)
+	articleList := articleStorage.GetList()
+	fmt.Println(articleList)
 	searchArticleList := articleStorage.Search("Lorem")
 	fmt.Println(searchArticleList)
 	fmt.Println(articleStorage)
