@@ -21,6 +21,8 @@ var ErrorAlreadyExists = errors.New("already exists id")
 var ErrorNotFound = errors.New("not found id ")
 var ErrorNotUpdated = errors.New("not update because not found id")
 var ErrorSearch = errors.New("not found data")
+
+//Successes varableName
 var SuccessUpdated = errors.New("SuccessFull Updated")
 var SuccessAdded = errors.New("SuccessFull Added")
 var SuccessDeleted = errors.New("SuccessFull Deleted")
