@@ -51,7 +51,7 @@ func main() {
 
 	//3 article
 	var a3 models.Article
-	a3.ID = 3
+	a3.ID = 1
 	a3.Title = "Why 13 Reasons"
 	a3.Body = "Cinema"
 	var a3p models.Person = models.Person{
@@ -71,7 +71,7 @@ func main() {
 
 	//update 1 article update
 	var updateA1 models.Article
-	updateA1.ID = 1
+	updateA1.ID = 789
 	updateA1.Title = "Go"
 	updateA1.Body = "Golang"
 	var updateA1Person models.Person = models.Person{

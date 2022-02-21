@@ -1,5 +1,6 @@
 package models
 
 type Person struct {
-	Firstname, Lastname string
+	Firstname string `json:"firstname"`
+	Lastname  string `json:"lastname"`
 }
