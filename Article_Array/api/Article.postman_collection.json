@@ -1,0 +1,121 @@
+{
+	"info": {
+		"_postman_id": "5bde9735-a1b8-4a3a-8bc5-c1a09ba99b05",
+		"name": "Article",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "getArticleList",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}article",
+					"host": [
+						"{{base_url}}article"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "createArticle",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": " {\n        \"id\": 3,\n        \"title\": \"Lorem\",\n        \"body\": \"Lorem ipsum\",\n        \"author\": {\n            \"firstname\": \"John\",\n            \"lastname\": \"Doe\"\n        },\n        \"created_at\": \"2022-02-21T20:37:35.18417195+05:00\"\n    }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}article",
+					"host": [
+						"{{base_url}}article"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Search",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}article/search?query",
+					"host": [
+						"{{base_url}}article"
+					],
+					"path": [
+						"search"
+					],
+					"query": [
+						{
+							"key": "query",
+							"value": null
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getArticleByID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": null
+			},
+			"response": []
+		},
+		{
+			"name": "deleteArticle",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}article/id7",
+					"host": [
+						"{{base_url}}article"
+					],
+					"path": [
+						"id7"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "updateArticel",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"id\": 4,\n    \"title\": \"Data\",\n    \"body\": \"Golang\",\n    \"author\": {\n        \"firstname\": \"John\",\n        \"lastname\": \"Doe\"\n    },\n    \"created_at\": \"2022-02-21T20:37:35.18417195+05:00\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}article/update",
+					"host": [
+						"{{base_url}}article"
+					],
+					"path": [
+						"update"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
