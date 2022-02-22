@@ -41,7 +41,7 @@ func main() {
 	router.GET("/article/search", SearchArticle)
 	router.GET("/article/id:id", GetArticleByID)
 	router.DELETE("/article/id:id", DeleteArticle)
-	router.POST("/article/update", UpdateArticle)
+	router.PUT("/article/update", UpdateArticle)
 	router.Run(":8080")
 }
 
@@ -71,6 +71,7 @@ func CreateArticle(ctx *gin.Context) {
 	ctx.JSON(200, "message : Success Created Article")
 }
 
+// search article data via article data
 func SearchArticle(ctx *gin.Context) {
 	//read router query e.x. {{base_url}}article/search?query=Lorem
 	searchText := ctx.Query("query")
