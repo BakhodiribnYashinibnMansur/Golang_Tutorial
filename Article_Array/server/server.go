@@ -1,21 +1,22 @@
 package main
 
 import (
+	_ "article/docs"
 	"article/models"
-	"article/storage"
 	"fmt"
 	"log"
 	"strconv"
 	"time"
 
-	_ "article/docs"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 
 	"github.com/gin-gonic/gin"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/swaggo/gin-swagger/swaggerFiles"
 )
 
-var articleStorage storage.ArticleStorage
+// var articleStorage storage.ArticleStorage
 
 // @title           Article API Docs
 // @version         1.1
@@ -38,26 +39,29 @@ type ResponseSuccess struct {
 	Data    interface{} `json:"data"`
 }
 
+var db *sqlx.DB
+
 func main() {
 	// initialize database
-	articleStorage = storage.NewArticleStorage()
-	var a1 models.Article
-	a1.ID = 1
-	a1.Title = "Lorem"
-	a1.Body = "Lorem ipsum"
-	var a1p models.Person = models.Person{
-		Firstname: "John",
-		Lastname:  "Doe",
-	}
-	a1.Author = a1p
-	t := time.Now()
-	a1.CreatedAt = &t
-	err := articleStorage.Add(a1)
+	psqlConnString := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		"localhost",
+		4000,
+		"postgres",
+		"0224",
+		"article",
+	)
+	var err error
+	db, err = sqlx.Connect("postgres", psqlConnString)
 	if err != nil {
 		fmt.Println(err)
 	}
+	fmt.Println("database", db)
+	// db, err = sql.Open("postgres", psqlConnString)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
 
-	//setup router
 	router := gin.Default()
 
 	//routers names
@@ -82,9 +86,43 @@ func main() {
 // @Failure      500  {string}  DefaultError
 // @Router       /article [GET]
 func GetArticleList(ctx *gin.Context) {
-	resp := articleStorage.GetList()
-	//response body json.
-	ctx.JSON(200, resp)
+	rows, err := db.Query(
+		`SELECT
+		ar.id,
+		ar.title,
+		ar.body,
+		au.firstname,
+		au.lastname,
+		ar.created_at FROM article AS ar JOIN author AS au ON ar.author_id = au.id WHERE  ar.deleted_at IS  NULL `,
+	)
+	if err != nil {
+		ctx.JSON(400, ResponseError{
+			Message: err.Error(),
+			Code:    400,
+		})
+		return
+	}
+
+	var arr []models.Article
+	for rows.Next() {
+		a := models.Article{}
+		err = rows.Scan(
+			&a.ID,
+			&a.Title,
+			&a.Body,
+			&a.Author.Firstname,
+			&a.Author.Lastname,
+			&a.CreatedAt)
+		arr = append(arr, a)
+		if err != nil {
+			log.Panic(err)
+		}
+	}
+	defer rows.Close()
+	ctx.JSON(200, ResponseSuccess{
+		Message: "successfull response",
+		Data:    arr,
+	})
 }
 
 // Create Article godoc
@@ -111,18 +149,41 @@ func CreateArticle(ctx *gin.Context) {
 		})
 		return
 	}
-	err = articleStorage.Add(article)
+	rows, err := db.Query(`INSERT INTO article(
+		title,
+		body,
+		author_id)
+VALUES ($1,$2,$3) RETURNING id;`, article.Title, article.Body, article.ID)
 	if err != nil {
-		log.Println(err)
+		ctx.JSON(422, ResponseError{
+			Message: "Invalid ID",
+			Code:    422,
+		})
+		return
+	}
+	var created_id int
+	for rows.Next() {
+		err = rows.Scan(
+			&created_id,
+		)
+		if err != nil {
+			ctx.JSON(400, ResponseError{
+				Message: err.Error(),
+				Code:    400,
+			})
+		}
+	}
+	if created_id == 0 {
 		ctx.JSON(400, ResponseError{
 			Message: err.Error(),
 			Code:    400,
 		})
-		return
+	} else {
+		ctx.JSON(200, ResponseSuccess{
+			Message: "Success Created Article",
+		})
 	}
-	ctx.JSON(200, ResponseSuccess{
-		Message: "Success Created Article",
-	})
+
 }
 
 // Search article via title  godoc
@@ -140,16 +201,49 @@ func CreateArticle(ctx *gin.Context) {
 func SearchArticle(ctx *gin.Context) {
 	//read router query e.x. {{base_url}}article/search?query=Lorem
 	searchText := ctx.Query("query")
+	fmt.Println(searchText)
 	if searchText != "" {
-		searchedList := articleStorage.Search(searchText)
-		if len(searchedList) == 0 {
+		rows, err := db.Query(`
+		SELECT
+			ar.id,
+		ar.title,
+		ar.body,
+		au.firstname,
+		au.lastname,
+		ar.created_at FROM article AS ar JOIN author AS au ON ar.author_id = au.id WHERE  ar.deleted_at IS  NULL AND ar.title LIKE  $1
+		`, searchText)
+		if err != nil {
+			ctx.JSON(400, ResponseError{
+				Message: err.Error(),
+				Code:    400,
+			})
+			return
+		}
+		var arr []models.Article
+		for rows.Next() {
+			a := models.Article{}
+			err = rows.Scan(
+				&a.ID,
+				&a.Title,
+				&a.Body,
+				&a.Author.Firstname,
+				&a.Author.Lastname,
+				&a.CreatedAt)
+			fmt.Println(arr)
+			arr = append(arr, a)
+			if err != nil {
+				log.Panic(err)
+			}
+		}
+		fmt.Println(arr)
+		if len(arr) == 0 {
 			//response json data gin.H
 			ctx.JSON(400, ResponseError{
 				Message: "None Result Data", Code: 400,
 			})
 			return
 		} else {
-			ctx.JSON(200, searchedList)
+			ctx.JSON(200, ResponseSuccess{Message: "Successfull data", Data: arr})
 			return
 		}
 	} else {
@@ -185,7 +279,14 @@ func GetArticleByID(ctx *gin.Context) {
 			log.Println(err)
 			return
 		}
-		getArticle, err := articleStorage.GetByID(id)
+		rows, err := db.Query(`SELECT
+			ar.id,
+		ar.title,
+		ar.body,
+		au.firstname,
+		au.lastname,
+		ar.created_at FROM article AS ar JOIN author AS au ON ar.id = $1 WHERE  ar.deleted_at IS NULL `, id)
+		// getArticle, err := articleStorage.GetByID(id)
 		if err != nil {
 			ctx.JSON(400, ResponseError{
 				Message: err.Error(),
@@ -194,10 +295,28 @@ func GetArticleByID(ctx *gin.Context) {
 			log.Println(err)
 			return
 		}
-		ctx.JSON(200, ResponseSuccess{
-			Message: "Successfull",
-			Data:    getArticle,
-		})
+		defer rows.Close()
+		var article models.Article
+		for rows.Next() {
+			err = rows.Scan(
+				&article.ID,
+				&article.Title,
+				&article.Body,
+				&article.Author.Firstname,
+				&article.Author.Lastname,
+				&article.CreatedAt)
+			if err != nil {
+				log.Panic(err)
+			}
+		}
+		if article.ID == 0 && article.CreatedAt == nil {
+			ctx.JSON(424, ResponseError{Message: "invalid article id "})
+		} else {
+			ctx.JSON(200, ResponseSuccess{
+				Message: "Successfull",
+				Data:    article,
+			})
+		}
 	}
 }
 
@@ -225,7 +344,8 @@ func DeleteArticle(ctx *gin.Context) {
 			log.Println(err)
 			return
 		}
-		err = articleStorage.Delete(id)
+		tm := time.Now()
+		rows, err := db.Query(` UPDATE article SET  deleted_at = $1 WHERE id = $2  RETURNING id`, tm, id)
 		if err != nil {
 			ctx.JSON(400, ResponseError{
 				Message: err.Error(),
@@ -233,9 +353,22 @@ func DeleteArticle(ctx *gin.Context) {
 			})
 			return
 		}
-		ctx.JSON(200, ResponseSuccess{
-			Message: "Successfull Deleted",
-		})
+		var updated_id int
+		for rows.Next() {
+			err = rows.Scan(
+				&updated_id,
+			)
+			if err != nil {
+				log.Panic(err)
+			}
+		}
+		if updated_id == 0 {
+			ctx.JSON(424, ResponseError{Message: "invalid article id "})
+		} else {
+			ctx.JSON(200, ResponseSuccess{
+				Message: "Successfull Deleted",
+			})
+		}
 	}
 }
 
@@ -253,25 +386,44 @@ func DeleteArticle(ctx *gin.Context) {
 // @Router       /article/update [PUT]
 func UpdateArticle(ctx *gin.Context) {
 	var article models.Article
+	//read request json data.
 	err := ctx.BindJSON(&article)
 	if err != nil {
-		log.Println(err)
-		ctx.JSON(422, ResponseError{
-			Message: err.Error(),
-			Code:    422,
-		})
-		return
-	}
-	err = articleStorage.Update(article)
-	if err != nil {
-		log.Println(err)
 		ctx.JSON(400, ResponseError{
 			Message: err.Error(),
 			Code:    400,
 		})
 		return
 	}
-	ctx.JSON(200, ResponseSuccess{
-		Message: "Successfull Updated",
-	})
+	rows, err := db.Query(`UPDATE article SET title=$1, body=$2  WHERE  id=$3 RETURNING id;`, article.Title, article.Body, article.ID)
+	if err != nil {
+		ctx.JSON(422, ResponseError{
+			Message: "Invalid ID",
+			Code:    422,
+		})
+		return
+	}
+	var updated_id int
+	for rows.Next() {
+		err = rows.Scan(
+			&updated_id,
+		)
+		if err != nil {
+			ctx.JSON(400, ResponseError{
+				Message: err.Error(),
+				Code:    400,
+			})
+		}
+	}
+	if updated_id == 0 {
+		ctx.JSON(400, ResponseError{
+			Message: err.Error(),
+			Code:    400,
+		})
+	} else {
+		ctx.JSON(200, ResponseSuccess{
+			Message: "Success Updated Article",
+		})
+	}
+
 }
