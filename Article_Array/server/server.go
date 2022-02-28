@@ -51,6 +51,7 @@ func main() {
 		"0224",
 		"article",
 	)
+
 	var err error
 	db, err = sqlx.Connect("postgres", psqlConnString)
 	if err != nil {
@@ -395,30 +396,26 @@ func UpdateArticle(ctx *gin.Context) {
 		})
 		return
 	}
-	rows, err := db.Query(`UPDATE article SET title=$1, body=$2  WHERE  id=$3 RETURNING id;`, article.Title, article.Body, article.ID)
+	rows, err := db.Exec(`UPDATE article SET title=$1, body=$2  WHERE  id=$3 RETURNING id;`, article.Title, article.Body, article.ID)
 	if err != nil {
 		ctx.JSON(422, ResponseError{
-			Message: "Invalid ID",
+			Message: err.Error(),
 			Code:    422,
 		})
 		return
 	}
-	var updated_id int
-	for rows.Next() {
-		err = rows.Scan(
-			&updated_id,
-		)
-		if err != nil {
-			ctx.JSON(400, ResponseError{
-				Message: err.Error(),
-				Code:    400,
-			})
-		}
-	}
-	if updated_id == 0 {
-		ctx.JSON(400, ResponseError{
+	updated, err := rows.RowsAffected()
+	if err != nil {
+		ctx.JSON(422, ResponseError{
 			Message: err.Error(),
-			Code:    400,
+			Code:    422,
+		})
+		return
+	}
+	if updated == 0 {
+		ctx.JSON(404, ResponseError{
+			Message: "Not Found Id",
+			Code:    404,
 		})
 	} else {
 		ctx.JSON(200, ResponseSuccess{
