@@ -346,7 +346,7 @@ func DeleteArticle(ctx *gin.Context) {
 			return
 		}
 		tm := time.Now()
-		rows, err := db.Query(` UPDATE article SET  deleted_at = $1 WHERE id = $2  RETURNING id`, tm, id)
+		rows, err := db.Exec(` UPDATE article SET  deleted_at = $1 WHERE id = $2  RETURNING id`, tm, id)
 		if err != nil {
 			ctx.JSON(400, ResponseError{
 				Message: err.Error(),
@@ -354,20 +354,22 @@ func DeleteArticle(ctx *gin.Context) {
 			})
 			return
 		}
-		var updated_id int
-		for rows.Next() {
-			err = rows.Scan(
-				&updated_id,
-			)
-			if err != nil {
-				log.Panic(err)
-			}
+		updated, err := rows.RowsAffected()
+		if err != nil {
+			ctx.JSON(422, ResponseError{
+				Message: err.Error(),
+				Code:    422,
+			})
+			return
 		}
-		if updated_id == 0 {
-			ctx.JSON(424, ResponseError{Message: "invalid article id "})
+		if updated == 0 {
+			ctx.JSON(404, ResponseError{
+				Message: "Not Found Id",
+				Code:    404,
+			})
 		} else {
 			ctx.JSON(200, ResponseSuccess{
-				Message: "Successfull Deleted",
+				Message: "Success Updated Article",
 			})
 		}
 	}
