@@ -150,30 +150,29 @@ func CreateArticle(ctx *gin.Context) {
 		})
 		return
 	}
-	rows, err := db.Query(`INSERT INTO article(
-		title,
-		body,
-		author_id)
-VALUES ($1,$2,$3) RETURNING id;`, article.Title, article.Body, article.ID)
+	rows, err := db.Exec(`WITH author AS (
+		INSERT INTO author (
+			firstname,
+		lastname)
+		VALUES($1,$2) RETURNING id)
+		INSERT INTO article (	title,
+		body,author_id) VALUES(
+   $3,$4 , (SELECT id FROM author) )`, article.Author.Firstname, article.Author.Lastname, article.Title, article.Body)
 	if err != nil {
 		ctx.JSON(422, ResponseError{
-			Message: "Invalid ID",
+			Message: err.Error(),
 			Code:    422,
 		})
 		return
 	}
-	var created_id int
-	for rows.Next() {
-		err = rows.Scan(
-			&created_id,
-		)
-		if err != nil {
-			ctx.JSON(400, ResponseError{
-				Message: err.Error(),
-				Code:    400,
-			})
-		}
+	created_id, err := rows.RowsAffected()
+	if err != nil {
+		ctx.JSON(400, ResponseError{
+			Message: err.Error(),
+			Code:    400,
+		})
 	}
+
 	if created_id == 0 {
 		ctx.JSON(400, ResponseError{
 			Message: err.Error(),
@@ -346,7 +345,10 @@ func DeleteArticle(ctx *gin.Context) {
 			return
 		}
 		tm := time.Now()
-		rows, err := db.Exec(` UPDATE article SET  deleted_at = $1 WHERE id = $2  RETURNING id`, tm, id)
+		rows, err := db.Exec(`WITH article AS (  UPDATE article SET
+			deleted_at = $1
+			WHERE id = $2  RETURNING author_id)
+			UPDATE author SET deleted_at = $3 WHERE id = (SELECT author_id  FROM article )`, tm, id, tm)
 		if err != nil {
 			ctx.JSON(400, ResponseError{
 				Message: err.Error(),
@@ -369,7 +371,7 @@ func DeleteArticle(ctx *gin.Context) {
 			})
 		} else {
 			ctx.JSON(200, ResponseSuccess{
-				Message: "Success Updated Article",
+				Message: "Success Deleted Article",
 			})
 		}
 	}
@@ -398,7 +400,13 @@ func UpdateArticle(ctx *gin.Context) {
 		})
 		return
 	}
-	rows, err := db.Exec(`UPDATE article SET title=$1, body=$2  WHERE  id=$3 RETURNING id;`, article.Title, article.Body, article.ID)
+	tm := time.Now()
+	rows, err := db.Exec(`WITH article AS (  UPDATE article SET
+			title = $1 ,
+			body = $2,
+			updated_at = $3
+			WHERE id = $4  RETURNING author_id)
+			UPDATE author SET firstname = $5,lastname = $6 , updated_at = $7 WHERE id = (SELECT author_id  FROM article )`, article.Title, article.Body, tm, article.ID, article.Author.Firstname, article.Author.Lastname, tm)
 	if err != nil {
 		ctx.JSON(422, ResponseError{
 			Message: err.Error(),
