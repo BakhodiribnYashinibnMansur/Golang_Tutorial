@@ -1,22 +1,4 @@
 definitions:
-  main.DefaultError:
-    properties:
-      message:
-        type: string
-    type: object
-  main.ResponseError:
-    properties:
-      code:
-        type: integer
-      message:
-        type: string
-    type: object
-  main.ResponseSuccess:
-    properties:
-      data: {}
-      message:
-        type: string
-    type: object
   models.Article:
     properties:
       author:
@@ -31,11 +13,29 @@ definitions:
       title:
         type: string
     type: object
+  models.DefaultError:
+    properties:
+      message:
+        type: string
+    type: object
   models.Person:
     properties:
       firstname:
         type: string
       lastname:
+        type: string
+    type: object
+  models.ResponseError:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  models.ResponseSuccess:
+    properties:
+      data: {}
+      message:
         type: string
     type: object
 host: localhost:8080
@@ -49,27 +49,6 @@ info:
   version: "1.1"
 paths:
   /article:
-    get:
-      consumes:
-      - application/json
-      description: get all articles in memory
-      operationId: get-all-article-handler
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.Article'
-            type: array
-        "500":
-          description: Internal Server Error
-          schema:
-            type: string
-      summary: Show an all article
-      tags:
-      - Article
     post:
       consumes:
       - application/json
@@ -88,19 +67,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.ResponseSuccess'
+            $ref: '#/definitions/models.ResponseSuccess'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/main.ResponseError'
+            $ref: '#/definitions/models.ResponseError'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/main.ResponseError'
+            $ref: '#/definitions/models.ResponseError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/main.DefaultError'
+            $ref: '#/definitions/models.DefaultError'
       summary: Create an Article
       tags:
       - Article
@@ -122,19 +101,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.ResponseSuccess'
+            $ref: '#/definitions/models.ResponseSuccess'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/main.ResponseError'
+            $ref: '#/definitions/models.ResponseError'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/main.ResponseError'
+            $ref: '#/definitions/models.ResponseError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/main.DefaultError'
+            $ref: '#/definitions/models.DefaultError'
       summary: delete article by id
       tags:
       - Article
@@ -159,15 +138,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/main.ResponseError'
+            $ref: '#/definitions/models.ResponseError'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/main.ResponseError'
+            $ref: '#/definitions/models.ResponseError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/main.DefaultError'
+            $ref: '#/definitions/models.DefaultError'
       summary: get article by id
       tags:
       - Article
@@ -178,10 +157,17 @@ paths:
       description: it search on base via response title
       operationId: search-handler
       parameters:
-      - description: Query Title
+      - description: offset
         in: query
-        name: query
-        required: true
+        name: offset
+        type: integer
+      - description: limit
+        in: query
+        name: limit
+        type: integer
+      - description: search
+        in: query
+        name: search
         type: string
       produces:
       - application/json
@@ -195,15 +181,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/main.ResponseError'
+            $ref: '#/definitions/models.ResponseError'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/main.ResponseError'
+            $ref: '#/definitions/models.ResponseError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/main.DefaultError'
+            $ref: '#/definitions/models.DefaultError'
       summary: search article via title
       tags:
       - Article
@@ -226,20 +212,65 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.ResponseSuccess'
+            $ref: '#/definitions/models.ResponseSuccess'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/main.ResponseError'
+            $ref: '#/definitions/models.ResponseError'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/main.ResponseError'
+            $ref: '#/definitions/models.ResponseError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/main.DefaultError'
+            $ref: '#/definitions/models.DefaultError'
       summary: Update an Article
+      tags:
+      - Article
+  /articles:
+    get:
+      consumes:
+      - application/json
+      description: get all articles in memory
+      operationId: getlist-handler
+      parameters:
+      - description: offset
+        in: query
+        name: offset
+        type: integer
+      - description: limit
+        in: query
+        name: limit
+        type: integer
+      - description: search
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSuccess'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.DefaultError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.DefaultError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.DefaultError'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/models.DefaultError'
+      summary: Show an all article
       tags:
       - Article
 swagger: "2.0"

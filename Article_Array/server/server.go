@@ -3,15 +3,16 @@ package main
 import (
 	_ "article/docs"
 	"article/models"
+	"article/storage"
+	"article/storage/postgres"
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
-	"time"
-
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/swaggo/gin-swagger/swaggerFiles"
 )
@@ -26,20 +27,7 @@ import (
 // @contact.email  phapp0224mb@gmail.com
 // @host      localhost:8080
 
-type DefaultError struct {
-	Message string `json:"message"`
-}
-
-type ResponseError struct {
-	Message string `json:"message"`
-	Code    int    `json:"code"`
-}
-type ResponseSuccess struct {
-	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
-}
-
-var db *sqlx.DB
+var articleRepo storage.ArticleRepository
 
 func main() {
 	// initialize database
@@ -51,22 +39,20 @@ func main() {
 		"0224",
 		"article",
 	)
-
 	var err error
-	db, err = sqlx.Connect("postgres", psqlConnString)
+
+	db, err := sqlx.Connect("postgres", psqlConnString)
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println("database", db)
-	// db, err = sql.Open("postgres", psqlConnString)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
+	articleRepo = postgres.NewArticleRepository(db)
 
-	router := gin.Default()
+	gin.SetMode(gin.DebugMode)
+	router := gin.New()
+	router.Use(gin.Logger(), gin.Recovery())
 
 	//routers names
-	router.GET("/article", GetArticleList)
+	router.GET("/articles", GetArticleList)
 	router.POST("/article", CreateArticle)
 	router.GET("/article/search", SearchArticle)
 	router.GET("/article/id:id", GetArticleByID)
@@ -77,52 +63,52 @@ func main() {
 }
 
 // Show all articles godoc
-// @Summary      Show an all article
+// @Summary     Show an all article
 // @Description  get all articles in memory
-// @Tags   Article
-// @ID                get-all-article-handler
-// @Produce      json
-// @Accept        json
-// @Success      200  {array}  models.Article
-// @Failure      500  {string}  DefaultError
-// @Router       /article [GET]
+// @ID getlist-handler
+// @Tags Article
+// @Param offset query int false "offset"
+// @Param limit query int false "limit"
+// @Param search query string false "search"
+// @Accept json
+// @Produce json
+// @Success 200 {object} models.ResponseSuccess
+// @Failure 400,404 {object} models.DefaultError
+// @Failure 500,503 {object} models.DefaultError
+// @Router /articles [GET]
 func GetArticleList(ctx *gin.Context) {
-	rows, err := db.Query(
-		`SELECT
-		ar.id,
-		ar.title,
-		ar.body,
-		au.firstname,
-		au.lastname,
-		ar.created_at FROM article AS ar JOIN author AS au ON ar.author_id = au.id WHERE  ar.deleted_at IS  NULL `,
-	)
+	offsetStr := ctx.DefaultQuery("offset", "0")
+	offset, err := strconv.Atoi(offsetStr)
 	if err != nil {
-		ctx.JSON(400, ResponseError{
+		ctx.JSON(400, models.DefaultError{
 			Message: err.Error(),
-			Code:    400,
 		})
-		return
+		fmt.Println(err)
 	}
 
-	var arr []models.Article
-	for rows.Next() {
-		a := models.Article{}
-		err = rows.Scan(
-			&a.ID,
-			&a.Title,
-			&a.Body,
-			&a.Author.Firstname,
-			&a.Author.Lastname,
-			&a.CreatedAt)
-		arr = append(arr, a)
-		if err != nil {
-			log.Panic(err)
-		}
+	limitStr := ctx.DefaultQuery("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, models.DefaultError{
+			Message: err.Error(),
+		})
+		fmt.Println(err)
 	}
-	defer rows.Close()
-	ctx.JSON(200, ResponseSuccess{
+
+	resp, err := articleRepo.GetList(models.Query{
+		Offset: offset,
+		Limit:  limit,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, models.DefaultError{
+			Message: err.Error(),
+		})
+		fmt.Println(err)
+		return
+	}
+	ctx.JSON(http.StatusOK, models.ResponseSuccess{
 		Message: "successfull response",
-		Data:    arr,
+		Data:    resp,
 	})
 }
 
@@ -134,55 +120,33 @@ func GetArticleList(ctx *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        data    body  models.Article true "Article data"
-// @Success      200   {object}      ResponseSuccess
-// @Failure      400,404  {object}  ResponseError
-// @Failure      500  {object}  DefaultError
+// @Success      200   {object}      models.ResponseSuccess
+// @Failure      400,404  {object}  models.ResponseError
+// @Failure      500  {object}  models.DefaultError
 // @Router       /article [POST]
 func CreateArticle(ctx *gin.Context) {
 	var article models.Article
 	//read request json data.
-	err := ctx.BindJSON(&article)
+	err := ctx.ShouldBindJSON(&article)
 	if err != nil {
-		log.Println(err)
-		ctx.JSON(400, ResponseError{
+		ctx.JSON(http.StatusBadRequest, models.ResponseError{
 			Message: err.Error(),
 			Code:    400,
 		})
 		return
 	}
-	rows, err := db.Exec(`WITH author AS (
-		INSERT INTO author (
-			firstname,
-		lastname)
-		VALUES($1,$2) RETURNING id)
-		INSERT INTO article (	title,
-		body,author_id) VALUES(
-   $3,$4 , (SELECT id FROM author) )`, article.Author.Firstname, article.Author.Lastname, article.Title, article.Body)
+	err = articleRepo.Create(article)
 	if err != nil {
-		ctx.JSON(422, ResponseError{
-			Message: err.Error(),
-			Code:    422,
-		})
-		return
-	}
-	created_id, err := rows.RowsAffected()
-	if err != nil {
-		ctx.JSON(400, ResponseError{
+		ctx.JSON(http.StatusBadRequest, models.ResponseError{
 			Message: err.Error(),
 			Code:    400,
 		})
+		return
 	}
 
-	if created_id == 0 {
-		ctx.JSON(400, ResponseError{
-			Message: err.Error(),
-			Code:    400,
-		})
-	} else {
-		ctx.JSON(200, ResponseSuccess{
-			Message: "Success Created Article",
-		})
-	}
+	ctx.JSON(http.StatusOK, models.ResponseSuccess{
+		Message: "Success Created Article",
+	})
 
 }
 
@@ -193,61 +157,52 @@ func CreateArticle(ctx *gin.Context) {
 // @Tags   Article
 // @Accept       json
 // @Produce      json
-// @Param        query    query  string true "Query Title"
+// @Param offset query int false "offset"
+// @Param limit query int false "limit"
+// @Param search query string false "search"
 // @Success      200   {array}      models.Article
-// @Failure      400,404  {object}  ResponseError
-// @Failure      500  {object}  DefaultError
+// @Failure      400,404  {object}  models.ResponseError
+// @Failure      500  {object}  models.DefaultError
 // @Router       /article/search [GET]
 func SearchArticle(ctx *gin.Context) {
+	offsetStr := ctx.DefaultQuery("offset", "0")
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil {
+		ctx.JSON(400, models.DefaultError{
+			Message: err.Error(),
+		})
+		fmt.Println(err)
+	}
+
+	limitStr := ctx.DefaultQuery("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, models.DefaultError{
+			Message: err.Error(),
+		})
+		fmt.Println(err)
+	}
 	//read router query e.x. {{base_url}}article/search?query=Lorem
-	searchText := ctx.Query("query")
-	fmt.Println(searchText)
+	searchText := ctx.Query("search")
 	if searchText != "" {
-		rows, err := db.Query(`
-		SELECT
-			ar.id,
-		ar.title,
-		ar.body,
-		au.firstname,
-		au.lastname,
-		ar.created_at FROM article AS ar JOIN author AS au ON ar.author_id = au.id WHERE  ar.deleted_at IS  NULL AND ar.title LIKE  $1
-		`, searchText)
+		resp, err := articleRepo.Search(models.Query{Offset: offset, Limit: limit, Search: searchText})
 		if err != nil {
-			ctx.JSON(400, ResponseError{
+			ctx.JSON(http.StatusBadRequest, models.DefaultError{
 				Message: err.Error(),
-				Code:    400,
 			})
-			return
+			fmt.Println(err)
 		}
-		var arr []models.Article
-		for rows.Next() {
-			a := models.Article{}
-			err = rows.Scan(
-				&a.ID,
-				&a.Title,
-				&a.Body,
-				&a.Author.Firstname,
-				&a.Author.Lastname,
-				&a.CreatedAt)
-			fmt.Println(arr)
-			arr = append(arr, a)
-			if err != nil {
-				log.Panic(err)
-			}
-		}
-		fmt.Println(arr)
-		if len(arr) == 0 {
-			//response json data gin.H
-			ctx.JSON(400, ResponseError{
+		if len(resp) == 0 {
+			ctx.JSON(http.StatusBadRequest, models.ResponseError{
 				Message: "None Result Data", Code: 400,
 			})
 			return
 		} else {
-			ctx.JSON(200, ResponseSuccess{Message: "Successfull data", Data: arr})
+			ctx.JSON(200, models.ResponseSuccess{Message: "Successfull data", Data: resp})
 			return
 		}
 	} else {
-		ctx.JSON(400, ResponseError{
+		ctx.JSON(http.StatusBadRequest, models.ResponseError{
 			Message: "Bad Input",
 			Code:    400,
 		})
@@ -263,8 +218,8 @@ func SearchArticle(ctx *gin.Context) {
 // @Produce      json
 // @Param        id   path  int     true "Param ID"
 // @Success      200   {object}      models.Article
-// @Failure      400,404  {object}  ResponseError
-// @Failure      500  {object}  DefaultError
+// @Failure      400,404  {object}  models.ResponseError
+// @Failure      500  {object}  models.DefaultError
 // @Router       /article/id{id} [GET]
 func GetArticleByID(ctx *gin.Context) {
 	//read router param e.x. {{base_url}}article/id7
@@ -272,51 +227,25 @@ func GetArticleByID(ctx *gin.Context) {
 	if paramID != "" {
 		id, err := strconv.Atoi(paramID)
 		if err != nil {
-			ctx.JSON(400, ResponseError{
+			ctx.JSON(http.StatusBadRequest, models.ResponseError{
 				Message: err.Error(),
 				Code:    400,
 			})
 			log.Println(err)
 			return
 		}
-		rows, err := db.Query(`SELECT
-			ar.id,
-		ar.title,
-		ar.body,
-		au.firstname,
-		au.lastname,
-		ar.created_at FROM article AS ar JOIN author AS au ON ar.id = $1 WHERE  ar.deleted_at IS NULL `, id)
-		// getArticle, err := articleStorage.GetByID(id)
+		resp, err := articleRepo.GetByID(id)
 		if err != nil {
-			ctx.JSON(400, ResponseError{
+			ctx.JSON(http.StatusBadRequest, models.ResponseError{
 				Message: err.Error(),
 				Code:    400,
 			})
-			log.Println(err)
 			return
 		}
-		defer rows.Close()
-		var article models.Article
-		for rows.Next() {
-			err = rows.Scan(
-				&article.ID,
-				&article.Title,
-				&article.Body,
-				&article.Author.Firstname,
-				&article.Author.Lastname,
-				&article.CreatedAt)
-			if err != nil {
-				log.Panic(err)
-			}
-		}
-		if article.ID == 0 && article.CreatedAt == nil {
-			ctx.JSON(424, ResponseError{Message: "invalid article id "})
-		} else {
-			ctx.JSON(200, ResponseSuccess{
-				Message: "Successfull",
-				Data:    article,
-			})
-		}
+		ctx.JSON(http.StatusOK, models.ResponseSuccess{
+			Message: "Success ",
+			Data:    resp,
+		})
 	}
 }
 
@@ -328,52 +257,36 @@ func GetArticleByID(ctx *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path  int     true "Param ID"
-// @Success      200   {object}    ResponseSuccess
-// @Failure      400,404  {object}  ResponseError
-// @Failure      500  {object}  DefaultError
+// @Success      200   {object}    models.ResponseSuccess
+// @Failure      400,404  {object}  models.ResponseError
+// @Failure      500  {object}  models.DefaultError
 // @Router       /article/id{id} [DELETE]
 func DeleteArticle(ctx *gin.Context) {
 	paramID := ctx.Param("id")
 	if paramID != "" {
 		id, err := strconv.Atoi(paramID)
 		if err != nil {
-			ctx.JSON(400, ResponseError{
-				Message: err.Error(),
-				Code:    400,
-			})
-			log.Println(err)
-			return
-		}
-		tm := time.Now()
-		rows, err := db.Exec(`WITH article AS (  UPDATE article SET
-			deleted_at = $1
-			WHERE id = $2  RETURNING author_id)
-			UPDATE author SET deleted_at = $3 WHERE id = (SELECT author_id  FROM article )`, tm, id, tm)
-		if err != nil {
-			ctx.JSON(400, ResponseError{
+			ctx.JSON(http.StatusBadRequest, models.ResponseError{
 				Message: err.Error(),
 				Code:    400,
 			})
 			return
 		}
-		updated, err := rows.RowsAffected()
+		repo, err := articleRepo.Delete(id)
 		if err != nil {
-			ctx.JSON(422, ResponseError{
+			ctx.JSON(http.StatusBadRequest, models.ResponseError{
 				Message: err.Error(),
-				Code:    422,
+				Code:    400,
 			})
 			return
 		}
-		if updated == 0 {
-			ctx.JSON(404, ResponseError{
-				Message: "Not Found Id",
-				Code:    404,
-			})
-		} else {
-			ctx.JSON(200, ResponseSuccess{
-				Message: "Success Deleted Article",
-			})
+		if repo == 0 {
+			ctx.JSON(http.StatusBadRequest, models.ResponseError{Message: "found id not found"})
+			return
 		}
+		ctx.JSON(http.StatusOK, models.ResponseSuccess{
+			Message: "Success Deleted Article",
+		})
 	}
 }
 
@@ -385,52 +298,37 @@ func DeleteArticle(ctx *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        data    body  models.Article true "Article data"
-// @Success      200   {object}      ResponseSuccess
-// @Failure      400,404  {object}  ResponseError
-// @Failure      500  {object}  DefaultError
+// @Success      200   {object}      models.ResponseSuccess
+// @Failure      400,404  {object}  models.ResponseError
+// @Failure      500  {object}  models.DefaultError
 // @Router       /article/update [PUT]
 func UpdateArticle(ctx *gin.Context) {
 	var article models.Article
 	//read request json data.
 	err := ctx.BindJSON(&article)
 	if err != nil {
-		ctx.JSON(400, ResponseError{
+		ctx.JSON(http.StatusBadRequest, models.ResponseError{
 			Message: err.Error(),
 			Code:    400,
 		})
 		return
 	}
-	tm := time.Now()
-	rows, err := db.Exec(`WITH article AS (  UPDATE article SET
-			title = $1 ,
-			body = $2,
-			updated_at = $3
-			WHERE id = $4  RETURNING author_id)
-			UPDATE author SET firstname = $5,lastname = $6 , updated_at = $7 WHERE id = (SELECT author_id  FROM article )`, article.Title, article.Body, tm, article.ID, article.Author.Firstname, article.Author.Lastname, tm)
+	repo, err := articleRepo.Update(article)
 	if err != nil {
-		ctx.JSON(422, ResponseError{
+		ctx.JSON(http.StatusBadRequest, models.ResponseError{
 			Message: err.Error(),
-			Code:    422,
+			Code:    400,
 		})
 		return
 	}
-	updated, err := rows.RowsAffected()
-	if err != nil {
-		ctx.JSON(422, ResponseError{
-			Message: err.Error(),
-			Code:    422,
-		})
-		return
-	}
-	if updated == 0 {
-		ctx.JSON(404, ResponseError{
+	if repo == 0 {
+		ctx.JSON(http.StatusBadRequest, models.ResponseError{
 			Message: "Not Found Id",
-			Code:    404,
+			Code:    400,
 		})
-	} else {
-		ctx.JSON(200, ResponseSuccess{
-			Message: "Success Updated Article",
-		})
+		return
 	}
-
+	ctx.JSON(http.StatusOK, models.ResponseSuccess{
+		Message: "Success Updated Article",
+	})
 }

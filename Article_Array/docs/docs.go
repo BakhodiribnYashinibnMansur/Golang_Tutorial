@@ -21,37 +21,6 @@ const docTemplate_swagger = `{
     "basePath": "{{.BasePath}}",
     "paths": {
         "/article": {
-            "get": {
-                "description": "get all articles in memory",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Article"
-                ],
-                "summary": "Show an all article",
-                "operationId": "get-all-article-handler",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.Article"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
             "post": {
                 "description": "it create article based on on input data",
                 "consumes": [
@@ -80,25 +49,25 @@ const docTemplate_swagger = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.ResponseSuccess"
+                            "$ref": "#/definitions/models.ResponseSuccess"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/main.ResponseError"
+                            "$ref": "#/definitions/models.ResponseError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/main.ResponseError"
+                            "$ref": "#/definitions/models.ResponseError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/main.DefaultError"
+                            "$ref": "#/definitions/models.DefaultError"
                         }
                     }
                 }
@@ -137,19 +106,19 @@ const docTemplate_swagger = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/main.ResponseError"
+                            "$ref": "#/definitions/models.ResponseError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/main.ResponseError"
+                            "$ref": "#/definitions/models.ResponseError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/main.DefaultError"
+                            "$ref": "#/definitions/models.DefaultError"
                         }
                     }
                 }
@@ -180,25 +149,25 @@ const docTemplate_swagger = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.ResponseSuccess"
+                            "$ref": "#/definitions/models.ResponseSuccess"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/main.ResponseError"
+                            "$ref": "#/definitions/models.ResponseError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/main.ResponseError"
+                            "$ref": "#/definitions/models.ResponseError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/main.DefaultError"
+                            "$ref": "#/definitions/models.DefaultError"
                         }
                     }
                 }
@@ -220,11 +189,22 @@ const docTemplate_swagger = `{
                 "operationId": "search-handler",
                 "parameters": [
                     {
+                        "type": "integer",
+                        "description": "offset",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
-                        "description": "Query Title",
-                        "name": "query",
-                        "in": "query",
-                        "required": true
+                        "description": "search",
+                        "name": "search",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -240,19 +220,19 @@ const docTemplate_swagger = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/main.ResponseError"
+                            "$ref": "#/definitions/models.ResponseError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/main.ResponseError"
+                            "$ref": "#/definitions/models.ResponseError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/main.DefaultError"
+                            "$ref": "#/definitions/models.DefaultError"
                         }
                     }
                 }
@@ -287,25 +267,93 @@ const docTemplate_swagger = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.ResponseSuccess"
+                            "$ref": "#/definitions/models.ResponseSuccess"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/main.ResponseError"
+                            "$ref": "#/definitions/models.ResponseError"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/main.ResponseError"
+                            "$ref": "#/definitions/models.ResponseError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/main.DefaultError"
+                            "$ref": "#/definitions/models.DefaultError"
+                        }
+                    }
+                }
+            }
+        },
+        "/articles": {
+            "get": {
+                "description": "get all articles in memory",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Article"
+                ],
+                "summary": "Show an all article",
+                "operationId": "getlist-handler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "offset",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "search",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSuccess"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.DefaultError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.DefaultError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.DefaultError"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/models.DefaultError"
                         }
                     }
                 }
@@ -313,34 +361,6 @@ const docTemplate_swagger = `{
         }
     },
     "definitions": {
-        "main.DefaultError": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "main.ResponseError": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "main.ResponseSuccess": {
-            "type": "object",
-            "properties": {
-                "data": {},
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
         "models.Article": {
             "type": "object",
             "properties": {
@@ -362,6 +382,14 @@ const docTemplate_swagger = `{
                 }
             }
         },
+        "models.DefaultError": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Person": {
             "type": "object",
             "properties": {
@@ -369,6 +397,26 @@ const docTemplate_swagger = `{
                     "type": "string"
                 },
                 "lastname": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ResponseError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ResponseSuccess": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
                     "type": "string"
                 }
             }
