@@ -1,66 +1,14 @@
-package main
+package handlers
 
 import (
-	_ "article/docs"
 	"article/models"
-	"article/storage"
-	"article/storage/postgres"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
-	ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/swaggo/gin-swagger/swaggerFiles"
 )
-
-// var articleStorage storage.ArticleStorage
-
-// @title           Article API Docs
-// @version         1.1
-// @description     This is a sample article server celler server.
-// @termsOfService  http://github.com/Golang_Tutorial/Article_Array
-// @contact.name   Bakhodir Yashin Mansur
-// @contact.email  phapp0224mb@gmail.com
-// @host      localhost:8080
-
-var articleRepo storage.ArticleRepository
-
-func main() {
-	// initialize database
-	psqlConnString := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		"localhost",
-		4000,
-		"postgres",
-		"0224",
-		"article",
-	)
-	var err error
-
-	db, err := sqlx.Connect("postgres", psqlConnString)
-	if err != nil {
-		fmt.Println(err)
-	}
-	articleRepo = postgres.NewArticleRepository(db)
-
-	gin.SetMode(gin.DebugMode)
-	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery())
-
-	//routers names
-	router.GET("/articles", GetArticleList)
-	router.POST("/article", CreateArticle)
-	router.GET("/article/search", SearchArticle)
-	router.GET("/article/id:id", GetArticleByID)
-	router.DELETE("/article/id:id", DeleteArticle)
-	router.PUT("/article/update", UpdateArticle)
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	router.Run(":8080")
-}
 
 // Show all articles godoc
 // @Summary     Show an all article
@@ -76,7 +24,7 @@ func main() {
 // @Failure 400,404 {object} models.DefaultError
 // @Failure 500,503 {object} models.DefaultError
 // @Router /articles [GET]
-func GetArticleList(ctx *gin.Context) {
+func (h *Handler) GetArticleList(ctx *gin.Context) {
 	offsetStr := ctx.DefaultQuery("offset", "0")
 	offset, err := strconv.Atoi(offsetStr)
 	if err != nil {
@@ -95,7 +43,7 @@ func GetArticleList(ctx *gin.Context) {
 		fmt.Println(err)
 	}
 
-	resp, err := articleRepo.GetList(models.Query{
+	resp, err := h.storage.Article().GetList(models.Query{
 		Offset: offset,
 		Limit:  limit,
 	})
@@ -124,7 +72,7 @@ func GetArticleList(ctx *gin.Context) {
 // @Failure      400,404  {object}  models.ResponseError
 // @Failure      500  {object}  models.DefaultError
 // @Router       /article [POST]
-func CreateArticle(ctx *gin.Context) {
+func (h *Handler) CreateArticle(ctx *gin.Context) {
 	var article models.Article
 	//read request json data.
 	err := ctx.ShouldBindJSON(&article)
@@ -135,7 +83,7 @@ func CreateArticle(ctx *gin.Context) {
 		})
 		return
 	}
-	err = articleRepo.Create(article)
+	err = h.storage.Article().Create(article)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, models.ResponseError{
 			Message: err.Error(),
@@ -164,7 +112,7 @@ func CreateArticle(ctx *gin.Context) {
 // @Failure      400,404  {object}  models.ResponseError
 // @Failure      500  {object}  models.DefaultError
 // @Router       /article/search [GET]
-func SearchArticle(ctx *gin.Context) {
+func (h *Handler) SearchArticle(ctx *gin.Context) {
 	offsetStr := ctx.DefaultQuery("offset", "0")
 	offset, err := strconv.Atoi(offsetStr)
 	if err != nil {
@@ -185,7 +133,7 @@ func SearchArticle(ctx *gin.Context) {
 	//read router query e.x. {{base_url}}article/search?query=Lorem
 	searchText := ctx.Query("search")
 	if searchText != "" {
-		resp, err := articleRepo.Search(models.Query{Offset: offset, Limit: limit, Search: searchText})
+		resp, err := h.storage.Article().Search(models.Query{Offset: offset, Limit: limit, Search: searchText})
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, models.DefaultError{
 				Message: err.Error(),
@@ -221,7 +169,7 @@ func SearchArticle(ctx *gin.Context) {
 // @Failure      400,404  {object}  models.ResponseError
 // @Failure      500  {object}  models.DefaultError
 // @Router       /article/id{id} [GET]
-func GetArticleByID(ctx *gin.Context) {
+func (h *Handler) GetArticleByID(ctx *gin.Context) {
 	//read router param e.x. {{base_url}}article/id7
 	paramID := ctx.Param("id")
 	if paramID != "" {
@@ -234,7 +182,7 @@ func GetArticleByID(ctx *gin.Context) {
 			log.Println(err)
 			return
 		}
-		resp, err := articleRepo.GetByID(id)
+		resp, err := h.storage.Article().GetByID(id)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, models.ResponseError{
 				Message: err.Error(),
@@ -261,7 +209,7 @@ func GetArticleByID(ctx *gin.Context) {
 // @Failure      400,404  {object}  models.ResponseError
 // @Failure      500  {object}  models.DefaultError
 // @Router       /article/id{id} [DELETE]
-func DeleteArticle(ctx *gin.Context) {
+func (h *Handler) DeleteArticle(ctx *gin.Context) {
 	paramID := ctx.Param("id")
 	if paramID != "" {
 		id, err := strconv.Atoi(paramID)
@@ -272,7 +220,7 @@ func DeleteArticle(ctx *gin.Context) {
 			})
 			return
 		}
-		repo, err := articleRepo.Delete(id)
+		repo, err := h.storage.Article().Delete(id)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, models.ResponseError{
 				Message: err.Error(),
@@ -302,7 +250,7 @@ func DeleteArticle(ctx *gin.Context) {
 // @Failure      400,404  {object}  models.ResponseError
 // @Failure      500  {object}  models.DefaultError
 // @Router       /article/update [PUT]
-func UpdateArticle(ctx *gin.Context) {
+func (h *Handler) UpdateArticle(ctx *gin.Context) {
 	var article models.Article
 	//read request json data.
 	err := ctx.BindJSON(&article)
@@ -313,7 +261,7 @@ func UpdateArticle(ctx *gin.Context) {
 		})
 		return
 	}
-	repo, err := articleRepo.Update(article)
+	repo, err := h.storage.Article().Update(article)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, models.ResponseError{
 			Message: err.Error(),

@@ -426,11 +426,11 @@ const docTemplate_swagger = `{
 
 // SwaggerInfo_swagger holds exported Swagger Info so clients can modify it
 var SwaggerInfo_swagger = &swag.Spec{
-	Version:          "1.1",
-	Host:             "localhost:8080",
+	Version:          "",
+	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Article API Docs",
+	Title:            "",
 	Description:      "This is a sample article server celler server.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate_swagger,

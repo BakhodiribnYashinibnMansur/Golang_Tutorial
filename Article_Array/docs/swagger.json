@@ -2,15 +2,12 @@
     "swagger": "2.0",
     "info": {
         "description": "This is a sample article server celler server.",
-        "title": "Article API Docs",
         "termsOfService": "http://github.com/Golang_Tutorial/Article_Array",
         "contact": {
             "name": "Bakhodir Yashin Mansur",
             "email": "phapp0224mb@gmail.com"
-        },
-        "version": "1.1"
+        }
     },
-    "host": "localhost:8080",
     "paths": {
         "/article": {
             "post": {
