@@ -12,7 +12,6 @@ import (
 )
 
 // var articleStorage storage.ArticleStorage
-
 // @title           Article API Docs
 // @version         1.1
 // @description     This is a sample article server celler server.
