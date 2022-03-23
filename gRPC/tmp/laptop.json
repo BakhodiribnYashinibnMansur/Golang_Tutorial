@@ -1,0 +1,62 @@
+{
+  "id": "9789f5e7-a48f-4131-9650-21fe156445d7",
+  "brand": "Apple",
+  "name": "Macbook Air",
+  "cpu": {
+    "brand": "Intel",
+    "name": "Core i9-9980HK",
+    "number_cores": 6,
+    "number_threads": 12,
+    "min_ghz": 3.4548476604460667,
+    "max_ghz": 3.7133569079578566
+  },
+  "ram": {
+    "value": "31",
+    "unit": "GIGABYTE"
+  },
+  "gpus": [
+    {
+      "brand": "AMD",
+      "name": "RX 5700-XT",
+      "min_ghz": 1.4690523852684494,
+      "max_ghz": 1.784124972648088,
+      "memory": {
+        "value": "6",
+        "unit": "GIGABYTE"
+      }
+    }
+  ],
+  "storages": [
+    {
+      "driver": "SSD",
+      "memory": {
+        "value": "348",
+        "unit": "GIGABYTE"
+      }
+    },
+    {
+      "driver": "HDD",
+      "memory": {
+        "value": "1",
+        "unit": "TERABYTE"
+      }
+    }
+  ],
+  "screen": {
+    "size_inch": 15.242405,
+    "resolution": {
+      "width": 7393,
+      "height": 4159
+    },
+    "panel": "OLED",
+    "multitouch": true
+  },
+  "keyboard": {
+    "layout": "QWERTY",
+    "backlit": false
+  },
+  "weight_kg": 1.6393358221808991,
+  "price_usd": 1628.1351400285425,
+  "release_year": 2018,
+  "updated_at": "2022-03-23T04:14:38.365560678Z"
+}

@@ -11,7 +11,7 @@ message Keyboard {
   enum Layout {
     UNKNOWN = 0;
     QWERTY = 1;
-    QWERTZ = 2;
+    DVOROK = 2;
     AZERTY = 3;
   }
 
